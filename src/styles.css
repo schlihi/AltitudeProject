@@ -347,3 +347,219 @@ li + li {
   border: 1px solid rgba(245, 158, 11, 0.4);
   color: #fcd34d;
 }
+
+/* =====================================================
+   Leaflet Map & Elevation Profile Styles
+   ===================================================== */
+
+.altitude-page-layout {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.map-container-full {
+  background: rgba(15, 23, 42, 0.8);
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  border-radius: 18px;
+  padding: 16px;
+  box-shadow: 0 10px 25px rgba(15, 23, 42, 0.2);
+}
+
+.leaflet-map-wrapper {
+  position: relative;
+  height: 450px;
+}
+
+.leaflet-map-wrapper .leaflet-container {
+  background: #1e293b;
+}
+
+.map-selection-indicator {
+  position: absolute;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(15, 23, 42, 0.95);
+  border: 1px solid rgba(148, 163, 184, 0.3);
+  border-radius: 8px;
+  padding: 10px 20px;
+  font-size: 0.9rem;
+  color: #e5eefb;
+  z-index: 1000;
+  pointer-events: none;
+}
+
+.map-selection-indicator .loading-text {
+  color: #60a5fa;
+}
+
+.profile-container {
+  background: rgba(15, 23, 42, 0.8);
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  border-radius: 18px;
+  padding: 20px;
+  box-shadow: 0 10px 25px rgba(15, 23, 42, 0.2);
+}
+
+/* Elevation Profile Component */
+.elevation-profile {
+  min-height: 300px;
+}
+
+.elevation-profile h3 {
+  margin: 0 0 16px 0;
+  font-size: 1.3rem;
+  color: #e5eefb;
+}
+
+.elevation-profile--empty,
+.elevation-profile--loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 20px;
+}
+
+.elevation-profile--error {
+  padding: 20px;
+}
+
+.elevation-profile--error ul {
+  margin-top: 12px;
+  text-align: left;
+  color: #94a3b8;
+}
+
+.profile-instructions {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-top: 24px;
+  max-width: 400px;
+}
+
+.instruction-step {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  text-align: left;
+}
+
+.step-number {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  background: rgba(96, 165, 250, 0.2);
+  border: 1px solid rgba(96, 165, 250, 0.4);
+  border-radius: 50%;
+  font-weight: 600;
+  color: #60a5fa;
+  flex-shrink: 0;
+}
+
+.profile-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.stat-item {
+  background: rgba(15, 23, 42, 0.6);
+  border: 1px solid rgba(148, 163, 184, 0.15);
+  border-radius: 10px;
+  padding: 12px;
+  text-align: center;
+}
+
+.stat-label {
+  display: block;
+  font-size: 0.75rem;
+  color: #94a3b8;
+  margin-bottom: 4px;
+}
+
+.stat-value {
+  display: block;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #e5eefb;
+}
+
+.profile-chart-container {
+  background: rgba(15, 23, 42, 0.6);
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 16px;
+}
+
+.profile-chart {
+  width: 100%;
+  max-height: 280px;
+}
+
+.profile-coordinates {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  font-size: 0.85rem;
+}
+
+.coord-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.coord-item--start .coord-marker {
+  color: #22c55e;
+}
+
+.coord-item--end .coord-marker {
+  color: #ef4444;
+}
+
+.reset-button {
+  display: block;
+  width: 100%;
+  margin-top: 16px;
+  padding: 12px 24px;
+  background: rgba(239, 68, 68, 0.15);
+  border: 1px solid rgba(239, 68, 68, 0.4);
+  border-radius: 8px;
+  color: #fca5a5;
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.reset-button:hover {
+  background: rgba(239, 68, 68, 0.25);
+  border-color: rgba(239, 68, 68, 0.6);
+}
+
+/* Leaflet overrides for dark theme */
+.leaflet-control-zoom a {
+  background: rgba(15, 23, 42, 0.9) !important;
+  color: #e5eefb !important;
+  border-color: rgba(148, 163, 184, 0.3) !important;
+}
+
+.leaflet-control-zoom a:hover {
+  background: rgba(30, 41, 59, 0.95) !important;
+}
+
+.leaflet-control-attribution {
+  background: rgba(15, 23, 42, 0.8) !important;
+  color: #94a3b8 !important;
+}
+
+.leaflet-control-attribution a {
+  color: #60a5fa !important;
+}

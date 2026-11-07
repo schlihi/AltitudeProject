@@ -1,78 +1,86 @@
+import { useState, useCallback } from 'react';
 import PageHeader from '../components/PageHeader';
-import InfoPanel from '../components/InfoPanel';
-import USMap from '../components/USMap';
-import AltitudeDisplay from '../components/AltitudeDisplay';
-import { useAltitudeComparison } from '../hooks/useAltitudeComparison';
+import LeafletMap from '../components/LeafletMap';
+import ElevationProfile from '../components/ElevationProfile';
+import { fetchElevationProfile } from '../services/usgsElevationService';
 
 export default function AltitudePage() {
-  const {
-    equation,
-    referencePoints,
-    selectedLocation,
-    altitudeData,
-    isLoading,
-    error,
-    selectLocation,
-  } = useAltitudeComparison();
+  const [startPoint, setStartPoint] = useState(null);
+  const [endPoint, setEndPoint] = useState(null);
+  const [selectionMode, setSelectionMode] = useState('start'); // 'start' or 'end'
+  const [profileData, setProfileData] = useState(null);
+  const [isLoading, setIsLoading] = useState(false);
+
+  const handlePointSelect = useCallback(async (lat, lon) => {
+    if (selectionMode === 'start') {
+      setStartPoint({ lat, lon });
+      setEndPoint(null);
+      setProfileData(null);
+      setSelectionMode('end');
+    } else {
+      setEndPoint({ lat, lon });
+      setSelectionMode('start');
+      
+      // Fetch elevation profile
+      setIsLoading(true);
+      try {
+        const profile = await fetchElevationProfile(
+          startPoint.lat, 
+          startPoint.lon, 
+          lat, 
+          lon,
+          50
+        );
+        setProfileData(profile);
+      } catch (err) {
+        console.error('Failed to fetch elevation profile:', err);
+        setProfileData([]);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+  }, [selectionMode, startPoint]);
+
+  const handleReset = useCallback(() => {
+    setStartPoint(null);
+    setEndPoint(null);
+    setProfileData(null);
+    setSelectionMode('start');
+  }, []);
 
   return (
     <main className="page-shell">
       <PageHeader
-        title="Altitude Comparison"
-        description="Educational comparison of terrain height, geoid separation, ellipsoid height, and drone altitude."
+        title="Terrain Elevation Explorer"
+        description="Click two points on the map to view the terrain elevation profile between them."
       />
 
-      <div className="content-grid">
-        <InfoPanel title="Core equation">
-          <span className="tag">h = H + N</span>
-          <p>{equation}</p>
-        </InfoPanel>
-
-        <InfoPanel title="Reference values">
-          <ul>
-            {referencePoints.map((point, index) => (
-              <li key={index}>{point}</li>
-            ))}
-          </ul>
-        </InfoPanel>
-      </div>
-
-      <div className="map-section">
-        <div className="map-panel">
-          <h2>Select Location on U.S. Map</h2>
-          <USMap
-            onLocationSelect={selectLocation}
-            selectedLocation={selectedLocation}
+      <div className="altitude-page-layout">
+        <div className="map-container-full">
+          <LeafletMap
+            startPoint={startPoint}
+            endPoint={endPoint}
+            onPointSelect={handlePointSelect}
             isLoading={isLoading}
+            selectionMode={selectionMode}
           />
         </div>
 
-        <div className="altitude-panel">
-          <AltitudeDisplay
-            data={altitudeData}
+        <div className="profile-container">
+          <ElevationProfile
+            profileData={profileData}
+            startPoint={startPoint}
+            endPoint={endPoint}
             isLoading={isLoading}
-            error={error}
           />
+          
+          {(startPoint || endPoint) && (
+            <button className="reset-button" onClick={handleReset}>
+              Reset Selection
+            </button>
+          )}
         </div>
       </div>
-
-      <section className="card" style={{ marginTop: '24px' }}>
-        <h3>Understanding Altitude References</h3>
-        <ul>
-          <li>
-            <strong>GPS devices</strong> report ellipsoid height (h), not terrain elevation.
-          </li>
-          <li>
-            <strong>Topographic maps</strong> show orthometric height (H) — elevation above Mean Sea Level.
-          </li>
-          <li>
-            The <strong>geoid</strong> is an equipotential surface approximating global Mean Sea Level; it varies due to Earth&apos;s uneven mass distribution.
-          </li>
-          <li>
-            In the continental U.S., geoid undulation (N) ranges from about −52m to +5m.
-          </li>
-        </ul>
-      </section>
     </main>
   );
 }
