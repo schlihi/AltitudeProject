@@ -1,9 +1,19 @@
 import PageHeader from '../components/PageHeader';
 import InfoPanel from '../components/InfoPanel';
+import USMap from '../components/USMap';
+import AltitudeDisplay from '../components/AltitudeDisplay';
 import { useAltitudeComparison } from '../hooks/useAltitudeComparison';
 
 export default function AltitudePage() {
-  const { equation, referencePoints } = useAltitudeComparison();
+  const {
+    equation,
+    referencePoints,
+    selectedLocation,
+    altitudeData,
+    isLoading,
+    error,
+    selectLocation,
+  } = useAltitudeComparison();
 
   return (
     <main className="page-shell">
@@ -20,31 +30,46 @@ export default function AltitudePage() {
 
         <InfoPanel title="Reference values">
           <ul>
-            {referencePoints.map((point) => (
-              <li key={point}>{point}</li>
+            {referencePoints.map((point, index) => (
+              <li key={index}>{point}</li>
             ))}
           </ul>
         </InfoPanel>
+      </div>
 
-        <InfoPanel title="Map placeholder">
-          <div className="placeholder-box">
-            U.S. map and altitude relationship view will be rendered here.
-          </div>
-        </InfoPanel>
+      <div className="map-section">
+        <div className="map-panel">
+          <h2>Select Location on U.S. Map</h2>
+          <USMap
+            onLocationSelect={selectLocation}
+            selectedLocation={selectedLocation}
+            isLoading={isLoading}
+          />
+        </div>
+
+        <div className="altitude-panel">
+          <AltitudeDisplay
+            data={altitudeData}
+            isLoading={isLoading}
+            error={error}
+          />
+        </div>
       </div>
 
       <section className="card" style={{ marginTop: '24px' }}>
-        <h3>Future altitude and drone logic</h3>
+        <h3>Understanding Altitude References</h3>
         <ul>
           <li>
-            Terrain elevation, geoid undulation, and ellipsoid height will be modeled in the geodesy layer.
+            <strong>GPS devices</strong> report ellipsoid height (h), not terrain elevation.
           </li>
           <li>
-            Drone-specific altitude interpretation will live in a separate service or domain module so the UI
-            remains presentation focused.
+            <strong>Topographic maps</strong> show orthometric height (H) — elevation above Mean Sea Level.
           </li>
           <li>
-            USGS Elevation API access and GEOID18 integration will be isolated from the page component.
+            The <strong>geoid</strong> is an equipotential surface approximating global Mean Sea Level; it varies due to Earth&apos;s uneven mass distribution.
+          </li>
+          <li>
+            In the continental U.S., geoid undulation (N) ranges from about −52m to +5m.
           </li>
         </ul>
       </section>

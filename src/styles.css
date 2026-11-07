@@ -122,3 +122,228 @@ li + li {
   text-align: center;
   padding: 18px;
 }
+
+/* Map Section Layout */
+.map-section {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+  margin-top: 24px;
+}
+
+@media (max-width: 900px) {
+  .map-section {
+    grid-template-columns: 1fr;
+  }
+}
+
+.map-panel,
+.altitude-panel {
+  background: rgba(15, 23, 42, 0.8);
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  border-radius: 18px;
+  padding: 20px;
+  box-shadow: 0 10px 25px rgba(15, 23, 42, 0.2);
+}
+
+.map-panel h2 {
+  margin: 0 0 16px 0;
+  font-size: 1.2rem;
+  color: #e5eefb;
+}
+
+/* US Map Component */
+.us-map-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.us-map-svg {
+  border-radius: 8px;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+}
+
+.map-instructions {
+  margin: 12px 0 0 0;
+  font-size: 0.85rem;
+  color: #94a3b8;
+  text-align: center;
+}
+
+/* Altitude Display Component */
+.altitude-display {
+  min-height: 400px;
+}
+
+.altitude-display h3 {
+  margin: 0 0 16px 0;
+  font-size: 1.2rem;
+  color: #e5eefb;
+}
+
+.altitude-display--empty,
+.altitude-display--loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+
+.altitude-display--error {
+  color: #fca5a5;
+}
+
+.altitude-display--error p {
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  border-radius: 8px;
+  padding: 12px;
+}
+
+.loading-spinner {
+  width: 40px;
+  height: 40px;
+  border: 3px solid rgba(96, 165, 250, 0.2);
+  border-top-color: #60a5fa;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.location-info {
+  margin-bottom: 16px;
+}
+
+.altitude-values {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.altitude-item {
+  padding: 12px;
+  border-radius: 10px;
+  background: rgba(15, 23, 42, 0.6);
+  border-left: 3px solid;
+}
+
+.altitude-item--terrain {
+  border-left-color: #f59e0b;
+}
+
+.altitude-item--geoid {
+  border-left-color: #22c55e;
+}
+
+.altitude-item--ellipsoid {
+  border-left-color: #60a5fa;
+}
+
+.altitude-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 500;
+  color: #e5eefb;
+  margin-bottom: 4px;
+}
+
+.altitude-icon {
+  font-size: 1rem;
+}
+
+.altitude-value {
+  font-size: 1.4rem;
+  font-weight: 600;
+  color: #fff;
+  margin-bottom: 4px;
+}
+
+.altitude-desc {
+  font-size: 0.75rem;
+  color: #94a3b8;
+}
+
+.altitude-equation {
+  background: rgba(96, 165, 250, 0.1);
+  border: 1px solid rgba(96, 165, 250, 0.3);
+  border-radius: 10px;
+  padding: 16px;
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+.equation-box {
+  font-size: 1.5rem;
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+
+.eq-h { color: #60a5fa; }
+.eq-H { color: #f59e0b; }
+.eq-N { color: #22c55e; }
+
+.equation-values {
+  font-size: 0.9rem;
+  color: #cbd5e1;
+  font-family: monospace;
+}
+
+.altitude-diagram {
+  background: rgba(15, 23, 42, 0.6);
+  border-radius: 10px;
+  padding: 12px;
+}
+
+.diagram-title {
+  font-size: 0.85rem;
+  color: #94a3b8;
+  margin-bottom: 8px;
+  text-align: center;
+}
+
+.diagram-svg {
+  width: 100%;
+  max-height: 180px;
+}
+
+/* Placeholder diagram layers */
+.altitude-diagram-placeholder {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding: 20px;
+  margin-top: 20px;
+}
+
+.diagram-layer {
+  padding: 16px;
+  border-radius: 8px;
+  text-align: center;
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
+.diagram-layer--ellipsoid {
+  background: rgba(96, 165, 250, 0.15);
+  border: 1px solid rgba(96, 165, 250, 0.4);
+  color: #93c5fd;
+}
+
+.diagram-layer--geoid {
+  background: rgba(34, 197, 94, 0.15);
+  border: 1px solid rgba(34, 197, 94, 0.4);
+  color: #86efac;
+}
+
+.diagram-layer--terrain {
+  background: rgba(245, 158, 11, 0.15);
+  border: 1px solid rgba(245, 158, 11, 0.4);
+  color: #fcd34d;
+}

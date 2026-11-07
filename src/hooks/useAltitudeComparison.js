@@ -1,16 +1,66 @@
+import { useState, useCallback } from 'react';
+import { fetchElevation } from '../services/usgsElevationService';
+import { getGeoidUndulation, calculateEllipsoidHeight } from '../geodesy/geoidModel';
+
 export function useAltitudeComparison() {
+  const [selectedLocation, setSelectedLocation] = useState(null);
+  const [altitudeData, setAltitudeData] = useState(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState(null);
+
+  const selectLocation = useCallback(async (lat, lon) => {
+    setSelectedLocation({ lat, lon });
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      // Fetch terrain elevation from USGS
+      const terrainElevation = await fetchElevation(lat, lon);
+      
+      // Calculate geoid undulation (approximation)
+      const geoidUndulation = getGeoidUndulation(lat, lon);
+      
+      // Calculate ellipsoid height: h = H + N
+      const ellipsoidHeight = terrainElevation !== null 
+        ? calculateEllipsoidHeight(terrainElevation, geoidUndulation)
+        : null;
+
+      setAltitudeData({
+        lat,
+        lon,
+        terrainElevation,
+        geoidUndulation,
+        ellipsoidHeight,
+      });
+    } catch (err) {
+      setError(err.message || 'Failed to fetch altitude data');
+      setAltitudeData(null);
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  const clearSelection = useCallback(() => {
+    setSelectedLocation(null);
+    setAltitudeData(null);
+    setError(null);
+  }, []);
+
   return {
+    selectedLocation,
+    altitudeData,
+    isLoading,
+    error,
+    selectLocation,
+    clearSelection,
+    // Static content for the info panels
     equation:
-      'This page will explain the standard relationship between ellipsoidal height, terrain height, and geoid separation.',
+      'Ellipsoid height (h) equals the sum of terrain elevation above the geoid (H) and geoid undulation (N): h = H + N',
     referencePoints: [
-      'Terrain elevation (H)',
-      'Geoid / Mean Sea Level (N)',
-      'Ellipsoid height (h)',
-      'Drone altitude reference',
+      'Terrain elevation (H) — Height above Mean Sea Level (geoid)',
+      'Geoid undulation (N) — Height of geoid relative to ellipsoid',
+      'Ellipsoid height (h) — Height above WGS84 ellipsoid (GPS reports this)',
+      'For drones: GPS altitude = ellipsoid height, not terrain altitude',
     ],
   };
 }
-
-// TODO: h = H + N relationship logic and reference-system handling belong in a geodesy domain module.
-// TODO: USGS Elevation API data loading and GEOID18 mapping should be isolated in services/.
-// TODO: Drone-related altitude interpretation logic belongs in a dedicated application or domain hook.
