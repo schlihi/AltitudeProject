@@ -1,0 +1,36 @@
+{
+  "format": "float32-le, row-major, rows lat0 + i*dlat, cols lon0 + j*dlon",
+  "nlat": 721,
+  "nlon": 1441,
+  "lat0": 90.0,
+  "dlat": -0.25,
+  "lon0": -180.0,
+  "dlon": 0.25,
+  "units": "m",
+  "quantity": "geoid height N above the WGS 84 ellipsoid",
+  "model": "GOCO06s",
+  "source_file": "GOCO06s_geoid.gdf",
+  "source_header": {
+    "modelname": "GOCO06s",
+    "functional": "geoid",
+    "refsysname": "WGS84",
+    "tide_system": "zero_tide"
+  },
+  "min": {
+    "value": -106.49,
+    "lat": 5.0,
+    "lon": 78.75
+  },
+  "max": {
+    "value": 85.38,
+    "lat": -8.25,
+    "lon": 147.25
+  },
+  "poi": {
+    "Mountain View": {
+      "lat": 37.3861,
+      "lon": -122.0839,
+      "N": -31.95
+    }
+  }
+}
