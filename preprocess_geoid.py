@@ -9,8 +9,9 @@ Output (in --out, default ./data):
   geoid_f32.bin  little-endian float32, geoid height N in metres, rows: latitude 90 -> -90, cols: longitude -180 -> 180 (the 180 column duplicates -180 so the mesh seam closes).
   geoid.json     grid description, model name, min/max with locations, and N at points of interest.
 
-Usage:
-  python3 preprocess_geoid.py GOCO06s_geoid.gdf --model "GOCO06s"
+To run:
+  python3 preprocess_geoid.py GOCO06s_geoid.gdf
+  python3 -m http.server 8000
 """
 import argparse
 import json
@@ -171,8 +172,7 @@ def main():
     print(f"max:   {info['max']['value']:8.2f} m at lat {info['max']['lat']:7.2f}, lon {info['max']['lon']:8.2f}")
     for name, p in poi.items():
         print(f"{name}: N = {p['N']:.2f} m")
-    if not args.synthetic:
-        print("sanity check: GOCO06s/EGM2008 should give roughly -106 m (south of India) and +85 m (near Iceland).")
+    print("sanity check: GOCO06s/EGM2008 should give roughly -106 m (south of India) and +85 m (near Iceland).")
 
 
 if __name__ == "__main__":
