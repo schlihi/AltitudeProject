@@ -1,44 +1,7 @@
-// Pure geometry helpers (no Three.js dependency) so they can be unit-tested in Node.
-// Units: lengths in equatorial radii (a = 1). Coordinates are Three.js-style, Y-up:
-// ECEF (x, y, z) -> Three (x, z, -y), which is a proper rotation (keeps handedness).
-
-export const WGS84 = { a: 6378137.0, f: 1 / 298.257223563 };
-export const E2 = WGS84.f * (2 - WGS84.f);
-const DEG = Math.PI / 180;
-
-/** Point at geodetic (lat, lon) degrees and ellipsoidal height h (in radii), in Three coords. */
-export function geodeticToThree(latDeg, lonDeg, h = 0, out = [0, 0, 0]) {
-  const phi = latDeg * DEG, lam = lonDeg * DEG;
-  const s = Math.sin(phi), c = Math.cos(phi);
-  const Nr = 1 / Math.sqrt(1 - E2 * s * s); // prime-vertical radius of curvature
-  const x = (Nr + h) * c * Math.cos(lam);
-  const y = (Nr + h) * c * Math.sin(lam);
-  const z = (Nr * (1 - E2) + h) * s;
-  out[0] = x; out[1] = z; out[2] = -y;
-  return out;
-}
-
-/** Outward ellipsoid normal at geodetic (lat, lon), in Three coords. Exact on a geodetic grid. */
-export function geodeticNormalThree(latDeg, lonDeg, out = [0, 0, 0]) {
-  const phi = latDeg * DEG, lam = lonDeg * DEG;
-  const c = Math.cos(phi);
-  out[0] = c * Math.cos(lam); out[1] = Math.sin(phi); out[2] = -c * Math.sin(lam);
-  return out;
-}
-
-/** Bilinear sample of the geoid grid (metres) at any lat/lon. Wraps in longitude. */
-export function sampleGrid(grid, latDeg, lonDeg) {
-  const { nlat, nlon, lat0, dlat, lon0, dlon, data } = grid;
-  const y = Math.min(Math.max((latDeg - lat0) / dlat, 0), nlat - 1);
-  const ring = nlon - 1; // last column duplicates the first
-  let x = (((lonDeg - lon0) % 360) + 360) % 360 / dlon;
-  const i0 = Math.min(Math.floor(y), nlat - 2), fy = y - i0;
-  const j0 = Math.floor(x) % ring, fx = x - Math.floor(x), j1 = (j0 + 1) % ring;
-  const r0 = i0 * nlon, r1 = (i0 + 1) * nlon;
-  const top = data[r0 + j0] * (1 - fx) + data[r0 + j1] * fx;
-  const bot = data[r1 + j0] * (1 - fx) + data[r1 + j1] * fx;
-  return top * (1 - fy) + bot * fy;
-}
+// Mesh/line geometry for the geoid globe, as plain typed arrays (no Three.js dependency).
+// Units: lengths in equatorial radii (a = 1), Three.js-style Y-up coordinates.
+import { WGS84_A, geodeticToUnitEllipsoid, geodeticNormal } from '../geodesy/wgs84';
+import { sampleGrid } from '../geodesy/geoidGrid';
 
 /**
  * Build the shared ellipsoid mesh on the data grid plus the per-vertex geoid attributes.
@@ -58,9 +21,9 @@ export function buildGlobeArrays(grid, kHi = 10000) {
     const lat = lat0 + i * dlat;
     for (let j = 0; j < nlon; j++) {
       const lon = lon0 + j * dlon, v = i * nlon + j;
-      geodeticToThree(lat, lon, 0, p);
-      geodeticNormalThree(lat, lon, q);
-      const nRel = data[v] / WGS84.a;
+      geodeticToUnitEllipsoid(lat, lon, 0, p);
+      geodeticNormal(lat, lon, q);
+      const nRel = data[v] / WGS84_A;
       for (let k = 0; k < 3; k++) {
         position[3 * v + k] = p[k];
         normal[3 * v + k] = q[k];
@@ -117,9 +80,9 @@ export function buildDrapedSegments(polylines, grid, maxStepDeg = 1) {
   const pos = [], dir = [], nn = [];
   const p = [0, 0, 0], q = [0, 0, 0];
   const push = (lon, lat) => {
-    geodeticToThree(lat, lon, 0, p); geodeticNormalThree(lat, lon, q);
+    geodeticToUnitEllipsoid(lat, lon, 0, p); geodeticNormal(lat, lon, q);
     pos.push(p[0], p[1], p[2]); dir.push(q[0], q[1], q[2]);
-    nn.push(grid ? sampleGrid(grid, lat, lon) / WGS84.a : 0);
+    nn.push(grid ? sampleGrid(grid, lat, lon) / WGS84_A : 0);
   };
   for (const line of polylines) {
     for (let k = 0; k + 1 < line.length; k++) {
@@ -166,17 +129,3 @@ export function geojsonPolylines(fc) {
   return out;
 }
 
-// ColorBrewer RdBu (11-class), reversed so negative N = blue, positive N = red. sRGB hex.
-export const DIVERGING = ['#053061', '#2166ac', '#4393c3', '#92c5de', '#d1e5f0', '#f7f7f7',
-  '#fddbc7', '#f4a582', '#d6604d', '#b2182b', '#67001f'];
-
-const hexToRgb = (h) => [1, 3, 5].map((k) => parseInt(h.slice(k, k + 2), 16) / 255);
-const STOPS = DIVERGING.map(hexToRgb);
-
-/** sRGB [r, g, b] in 0..1 for value v on a symmetric diverging scale clamped at +/- vmax. */
-export function divergingColor(v, vmax) {
-  const t = Math.min(Math.max((v / vmax + 1) / 2, 0), 1) * (STOPS.length - 1);
-  const k = Math.min(Math.floor(t), STOPS.length - 2), f = t - k;
-  const a = STOPS[k], b = STOPS[k + 1];
-  return [a[0] + (b[0] - a[0]) * f, a[1] + (b[1] - a[1]) * f, a[2] + (b[2] - a[2]) * f];
-}

@@ -5,13 +5,12 @@ Convert a global geoid-height grid into the binary + JSON pair the viewer loads.
 Inputs (auto-detected by extension):
   .gdf  ICGEM Calculation Service grid output (e.g. GOCO06s geoid heights, reference system WGS84). The geoid value is taken from the last column.
 
-Output (in --out, default ./data):
+Output (in --out, default ./public/data, which Vite serves at /data/):
   geoid_f32.bin  little-endian float32, geoid height N in metres, rows: latitude 90 -> -90, cols: longitude -180 -> 180 (the 180 column duplicates -180 so the mesh seam closes).
   geoid.json     grid description, model name, min/max with locations, and N at points of interest.
 
 To run:
-  python3 preprocess_geoid.py GOCO06s_geoid.gdf
-  python3 -m http.server 8000
+  python3 scripts/preprocess_geoid.py GOCO06s_geoid.gdf   (run from the repo root)
 """
 import argparse
 import json
@@ -112,7 +111,7 @@ def bilinear(lats, lons, grid, qlat, qlon):
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("input", nargs="?", help=".gdf (ICGEM) geoid grid")
-    ap.add_argument("-o", "--out", default="data", help="output directory (default: data)")
+    ap.add_argument("-o", "--out", default="public/data", help="output directory (default: public/data)")
     ap.add_argument("--step", type=float, default=0.25, help="output grid step in degrees (default 0.25)")
     ap.add_argument("--model", default="GOCO06s", help="model name shown in the viewer, e.g. GOCO06s")
     args = ap.parse_args()
