@@ -182,7 +182,7 @@ export function createGeoidGlobe(container, grid, { coastlines = null, onKChange
   // Graticule on the ellipsoid (h = 0); lifted above everything at low k to avoid z-fighting.
   layers.graticule = new THREE.LineSegments(
     segmentsGeometry(buildDrapedSegments(graticulePolylines(15, 1), null)),
-    draped(new THREE.LineBasicMaterial({ color: 0xdfe6f0, transparent: true, opacity: 0.55 }), uK, uGratLift),
+    draped(new THREE.LineBasicMaterial({ color: 0x1a9850, transparent: true, opacity: 0.8 }), uK, uGratLift),
   );
   layers.graticule.renderOrder = 1;
   layers.graticule.frustumCulled = false;
