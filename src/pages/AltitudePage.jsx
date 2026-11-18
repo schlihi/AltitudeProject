@@ -3,8 +3,11 @@ import PageHeader from '../components/PageHeader';
 import LeafletMap from '../components/LeafletMap';
 import ElevationProfile from '../components/ElevationProfile';
 import { fetchElevationProfile } from '../services/usgsElevationService';
+import ReferenceSurfaces from '../components/ReferenceSurfaces'; 
 
 export default function AltitudePage() {
+  const [activeTab, setActiveTab] = useState('reference');
+  
   const [startPoint, setStartPoint] = useState(null);
   const [endPoint, setEndPoint] = useState(null);
   const [selectionMode, setSelectionMode] = useState('start'); // 'start' or 'end'
@@ -55,6 +58,43 @@ export default function AltitudePage() {
         description="Click two points on the map to view the terrain elevation profile between them."
       />
 
+      <div className="tab-menu" style={{ display: 'flex', gap: '10px', marginBottom: '20px', padding: '0 20px' }}>
+        <button 
+          onClick={() => setActiveTab('reference')}
+          style={{ 
+            padding: '10px 20px', 
+            backgroundColor: activeTab === 'reference' ? '#0ea5e9' : '#334155',
+            color: 'white',
+            border: 'none',
+            borderRadius: '5px',
+            cursor: 'pointer'
+          }}
+        >
+          Reference Surfaces (Drone View)
+        </button>
+        <button 
+          onClick={() => setActiveTab('profile')}
+          style={{ 
+            padding: '10px 20px', 
+            backgroundColor: activeTab === 'profile' ? '#0ea5e9' : '#334155',
+            color: 'white',
+            border: 'none',
+            borderRadius: '5px',
+            cursor: 'pointer'
+          }}
+        >
+          A-to-B Elevation Profile
+        </button>
+      </div>
+
+      {/* --- RENDER BASED ON SELECTED TAB --- */}
+      {activeTab === 'reference' ? (
+        
+        // Render YOUR new component
+        <ReferenceSurfaces />
+
+      ) : (
+
       <div className="altitude-page-layout">
         <div className="map-container-full">
           <LeafletMap
@@ -81,6 +121,8 @@ export default function AltitudePage() {
           )}
         </div>
       </div>
+      )}
     </main>
   );
 }
+
