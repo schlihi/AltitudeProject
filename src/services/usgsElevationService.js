@@ -75,7 +75,7 @@ export async function fetchElevationProfile(startLat, startLon, endLat, endLon, 
   }
 
   // Fetch elevations in batches to avoid overwhelming the API
-  const BATCH_SIZE = 10;
+  const BATCH_SIZE = 25;
   const BATCH_DELAY = 100; // ms between batches
   
   for (let i = 0; i < points.length; i += BATCH_SIZE) {

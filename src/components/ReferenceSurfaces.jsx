@@ -2,12 +2,12 @@ import React, { useState, useRef, useEffect } from 'react';
 import { MapContainer, TileLayer, Marker, useMapEvents } from 'react-leaflet';
 import { useReferenceSurfaces } from '../hooks/useReferenceSurfaces';
 
-// Map click capturer
 function MapClickCapturer({ onLocationSelect }) {
   useMapEvents({
-    click(e) {
-      onLocationSelect(e.latlng.lat, e.latlng.lng);
-    },
+    click(e) { 
+      // Hardcoded to always fetch a crisp 5km slice instantly
+      onLocationSelect(e.latlng.lat, e.latlng.lng, 5); 
+    }
   });
   return null;
 }
@@ -15,89 +15,103 @@ function MapClickCapturer({ onLocationSelect }) {
 export default function ReferenceSurfaces() {
   const { selectedLocation, surfaceData, isLoading, selectLocation } = useReferenceSurfaces();
   
-  const [droneAltitude, setDroneAltitude] = useState(0); 
+  const [dronePos, setDronePos] = useState({ x: 0, y: 0 }); 
+  
+  const [verticalCeiling, setVerticalCeiling] = useState(1000);   
+  
   const isDragging = useRef(false);
+  const boxRef = useRef(null);
 
-  // Snap drone to terrain when data loads
   useEffect(() => {
-    if (surfaceData) {
-      setDroneAltitude(surfaceData.terrainElevation);
+    if (surfaceData && surfaceData.length > 0) {
+      const middlePoint = surfaceData[Math.floor(surfaceData.length / 2)];
+      setDronePos({ x: middlePoint.distance, y: middlePoint.H });
     }
   }, [surfaceData]);
 
-  // ==========================================
-  // THE MATH: METERS TO PIXELS SCALING
-  // ==========================================
-  
-  // Default values to prevent crashing before data loads
-  let H = 0; // Terrain
-  let N = 0; // Geoid Undulation
+
   let minMeters = -100;
   let maxMeters = 100;
   let rangeMeters = 200;
-  
-  // Height of the CSS box where we draw the diagram (must match your CSS!)
-  const BOX_HEIGHT_PX = 400; 
+  let totalDistance = 5000; 
+  let currentDataPoint = null;
 
-  if (surfaceData) {
-    H = surfaceData.terrainElevation;
-    N = surfaceData.geoidUndulation;
+  if (surfaceData && surfaceData.length > 0) {
+    totalDistance = surfaceData[surfaceData.length - 1].distance;
 
-    // Find the highest and lowest points on our graph
-    // (Drone might fly higher than the terrain, so we include it in the max)
-    const highestPoint = Math.max(H, 0, -N, droneAltitude);
-    const lowestPoint = Math.min(H, 0, -N);
+    let lowest = 0;
+    surfaceData.forEach(p => { lowest = Math.min(lowest, p.H, 0, -p.N); });
+    minMeters = lowest - 50; 
 
-    // Add 50 meters of visual "padding" above and below so lines don't hit the box edges
-    maxMeters = highestPoint + 50;
-    minMeters = lowestPoint - 50;
+    let autoHighest = dronePos.y;
+    surfaceData.forEach(p => { autoHighest = Math.max(autoHighest, p.H, 0, -p.N); });
+    let autoMaxMeters = autoHighest + 50;
+
+    maxMeters = Math.max(autoMaxMeters, verticalCeiling);
     rangeMeters = maxMeters - minMeters;
+
+    currentDataPoint = surfaceData.reduce((prev, curr) => 
+      Math.abs(curr.distance - dronePos.x) < Math.abs(prev.distance - dronePos.x) ? curr : prev
+    );
   }
 
-  // Helper function: Converts a meter value into a CSS percentage for the "bottom" property
-  const getBottomPercent = (meters) => {
-    return ((meters - minMeters) / rangeMeters) * 100;
-  };
+  const getXPercent = (dist) => (dist / totalDistance) * 100;
+  const getYPercent = (meters) => ((meters - minMeters) / rangeMeters) * 100;
+  const getSvgY = (meters) => 100 - getYPercent(meters); 
 
-  // ==========================================
-  // DRAG LOGIC
-  // ==========================================
+
 
   const handlePointerDown = (e) => {
     isDragging.current = true;
-    e.target.setPointerCapture(e.pointerId);
+    e.target.setPointerCapture(e.pointerId); 
   };
 
   const handlePointerMove = (e) => {
-    if (!isDragging.current || !surfaceData) return;
+    if (!isDragging.current || !surfaceData || !boxRef.current) return;
     
-    // Convert the mouse movement (pixels) back into meters
-    const pixelsPerMeter = BOX_HEIGHT_PX / rangeMeters;
+    const boxRect = boxRef.current.getBoundingClientRect();
+    const pixelsPerMeterX = boxRect.width / totalDistance;
+    const pixelsPerMeterY = boxRect.height / rangeMeters;
     
-    // Negative because moving the mouse UP means movementY is negative, but altitude increases
-    const metersMoved = -e.movementY / pixelsPerMeter; 
+    const metersMovedX = e.movementX / pixelsPerMeterX;
+    const metersMovedY = -e.movementY / pixelsPerMeterY; 
     
-    setDroneAltitude((prev) => {
-      let newAlt = prev + metersMoved;
-      // CONSTRAINT: Drone cannot go below the terrain
-      if (newAlt < H) return H;
-      return newAlt;
+    setDronePos((prev) => {
+      let newX = prev.x + metersMovedX;
+      let newY = prev.y + metersMovedY;
+
+      if (newX < 0) newX = 0;
+      if (newX > totalDistance) newX = totalDistance;
+
+      const nearestPoint = surfaceData.reduce((prevPt, currPt) => 
+        Math.abs(currPt.distance - newX) < Math.abs(prevPt.distance - newX) ? currPt : prevPt
+      );
+      
+      if (newY < nearestPoint.H) newY = nearestPoint.H;
+
+      return { x: newX, y: newY };
     });
   };
 
-  const handlePointerUp = () => {
-    isDragging.current = false;
-  };
+  const handlePointerUp = () => { isDragging.current = false; };
 
-  // Telemetry Calculations
-  const agl = surfaceData ? droneAltitude - H : 0;
-  const droneWGS84 = surfaceData ? droneAltitude + N : 0;
+
+
+  let geoidPath = "";
+  let ellipsoidPath = "";
+  let terrainPath = "";
+
+  if (surfaceData) {
+    geoidPath = surfaceData.map((p, i) => `${i===0?'M':'L'} ${getXPercent(p.distance)} ${getSvgY(0)}`).join(' ');
+    ellipsoidPath = surfaceData.map((p, i) => `${i===0?'M':'L'} ${getXPercent(p.distance)} ${getSvgY(-p.N)}`).join(' ');
+    terrainPath = surfaceData.map((p, i) => `${i===0?'M':'L'} ${getXPercent(p.distance)} ${getSvgY(p.H)}`).join(' ');
+  }
 
   return (
     <div className="reference-surfaces-container">
-      {/* LEFT SIDE: MAP */}
       <div className="map-section">
         <h3>Select a Location</h3>
+
         <MapContainer center={[39.0, -98.0]} zoom={4} style={{ height: '400px', width: '100%' }}>
           <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
           <MapClickCapturer onLocationSelect={selectLocation} />
@@ -105,75 +119,105 @@ export default function ReferenceSurfaces() {
         </MapContainer>
       </div>
 
-      {/* RIGHT SIDE: SIDE VIEW */}
       <div className="side-view-section">
-        {isLoading && <p>Calculating reference surfaces...</p>}
+        {(!surfaceData && isLoading) && <p>Fetching altitude data...</p>}
         
-        {surfaceData && (
+        {surfaceData && currentDataPoint && (
           <div className="interactive-cross-section">
             
             <div className="drone-dashboard">
-              <h4>🚁 Drone Telemetry</h4>
-              <p><strong>AGL (Above Ground):</strong> {agl.toFixed(1)} m</p>
-              <p><strong>MSL (Above Geoid):</strong> {droneAltitude.toFixed(1)} m</p>
-              <p><strong>GPS/WGS84 Height:</strong> {droneWGS84.toFixed(1)} m</p>
+              <h4>Altitude Data</h4>
+              <p><strong>Location:</strong> {currentDataPoint.lat.toFixed(4)}°, {currentDataPoint.lon.toFixed(4)}°</p>
+              <p><strong>AGL:</strong> {(dronePos.y - currentDataPoint.H).toFixed(1)} m</p>
+              <p><strong>MSL:</strong> {dronePos.y.toFixed(1)} m</p>
+              <p><strong>WGS84:</strong> {(dronePos.y + currentDataPoint.N).toFixed(1)} m</p>
             </div>
 
-            <div className="diagram-box">
+            <div style={{ display: 'flex', gap: '20px', marginBottom: '15px', background: 'rgba(15, 23, 42, 0.8)', padding: '15px', borderRadius: '10px' }}>
+              <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+                <label style={{ fontSize: '0.8rem', color: '#94a3b8', marginBottom: '5px' }}>
+                  Vertical Range
+                </label>
+                <input 
+                  type="range" 
+                  min="100" 
+                  max="20000" 
+                  step="100"
+                  value={verticalCeiling} 
+                  onChange={(e) => setVerticalCeiling(parseInt(e.target.value))}
+                  style={{ cursor: 'pointer', accentColor: '#22c55e' }}
+                />
+              </div>
+            </div>
+
+            <div className="diagram-box" ref={boxRef} style={{ position: 'relative' }}>
                
-               {/* 1. ELLIPSOID LINE (Position: -N) */}
-               <div 
-                 className="line ellipsoid-line" 
-                 style={{ bottom: `${getBottomPercent(-N)}%` }}
+               <svg 
+                 viewBox="0 0 100 100" 
+                 preserveAspectRatio="none" 
+                 style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%' }}
                >
-                 WGS84 Ellipsoid
+                 <path d={ellipsoidPath} fill="none" stroke="#60a5fa" strokeWidth="1.5" strokeDasharray="2" vectorEffect="non-scaling-stroke" />
+                 <path d={geoidPath} fill="none" stroke="#22c55e" strokeWidth="1.5" strokeDasharray="2" vectorEffect="non-scaling-stroke" />
+                 <path d={terrainPath} fill="none" stroke="#f59e0b" strokeWidth="2.5" vectorEffect="non-scaling-stroke" />
+               </svg>
+
+               {isLoading && (
+                 <div style={{
+                   position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', 
+                   color: '#e5eefb', background: 'rgba(15, 23, 42, 0.9)', border: '1px solid rgba(96, 165, 250, 0.5)',
+                   padding: '12px 24px', borderRadius: '20px', zIndex: 50, boxShadow: '0 4px 12px rgba(0,0,0,0.5)',
+                   display: 'flex', alignItems: 'center', gap: '12px'
+                 }}>
+                   <div className="loading-spinner" style={{width: '20px', height: '20px', borderWidth: '2px'}} />
+                   Fetching data...
+                 </div>
+               )}
+
+               <div style={{position: 'absolute', top: 10, left: 10, color: '#93c5fd', fontSize: '0.8rem'}}>WGS84 Ellipsoid</div>
+               <div style={{position: 'absolute', top: 25, left: 10, color: '#86efac', fontSize: '0.8rem'}}>Geoid (MSL)</div>
+               <div style={{position: 'absolute', top: 40, left: 10, color: '#fcd34d', fontSize: '0.8rem'}}>Terrain Surface</div>
+
+               <div style={{ position: 'absolute', bottom: 0, width: '100%', height: '20px', borderTop: '1px solid rgba(148, 163, 184, 0.2)' }}>
+                 {[0, 0.2, 0.4, 0.6, 0.8, 1].map((fraction) => (
+                   <div 
+                     key={fraction} 
+                     style={{ 
+                       position: 'absolute', 
+                       left: `${fraction * 100}%`, 
+                       bottom: '2px', 
+                       transform: 'translateX(-50%)', 
+                       textAlign: 'center',
+                       pointerEvents: 'none' 
+                     }}
+                   >
+                     <div style={{ width: '1px', height: '4px', backgroundColor: '#94a3b8', margin: '0 auto' }} />
+                     <span style={{ fontSize: '0.65rem', color: '#94a3b8' }}>
+                       {(fraction * 5).toFixed(1)} km
+                     </span>
+                   </div>
+                 ))}
                </div>
 
-               {/* 2. GEOID / MSL LINE (Position: 0) */}
-               <div 
-                 className="line geoid-line" 
-                 style={{ bottom: `${getBottomPercent(0)}%` }}
-               >
-                 Geoid (Mean Sea Level)
-               </div>
-
-               {/* 3. TERRAIN LINE (Position: H) */}
-               <div 
-                 className="line terrain-line" 
-                 style={{ bottom: `${getBottomPercent(H)}%` }}
-               >
-                 Terrain Surface
-               </div>
-
-               {/* (Optional Visual Bonus) A block of color representing the solid ground below the terrain line */}
-               <div 
-                 style={{
-                   position: 'absolute',
-                   bottom: 0,
-                   width: '100%',
-                   height: `${getBottomPercent(H)}%`,
-                   backgroundColor: 'rgba(139, 69, 19, 0.4)', // transparent brown
-                   borderTop: '2px solid #8b4513'
-                 }}
-               />
-
-               {/* 4. THE DRONE */}
                <div 
                  className="drone-icon"
                  onPointerDown={handlePointerDown}
                  onPointerMove={handlePointerMove}
                  onPointerUp={handlePointerUp}
-                 onPointerCancel={handlePointerUp}
+                 onPointerCancel={handlePointerUp} 
                  style={{ 
-                   bottom: `${getBottomPercent(droneAltitude)}%`,
-                   // We add margin-bottom so the bottom of the drone icon touches the line, 
-                   // rather than the invisible center of the text box
-                   marginBottom: '-15px' 
+                   left: `${getXPercent(dronePos.x)}%`,
+                   bottom: `${getYPercent(dronePos.y)}%`,
+                   marginBottom: '-15px',
+                   cursor: isDragging.current ? 'grabbing' : 'grab',
+                   zIndex: 10,
+                   fontSize: '1.5rem'
                  }}
                >
-                 🚁
+                 ✈︎
                </div>
             </div>
+
           </div>
         )}
       </div>
