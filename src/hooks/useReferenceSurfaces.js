@@ -1,5 +1,6 @@
 import { useState, useCallback } from 'react';
-import { fetchElevationProfile } from '../services/usgsElevationService';
+//import { fetchElevationProfile } from '../services/usgsElevationService';
+import { fetchElevationProfile } from '../services/openMeteoElevationService';
 
 let globalGeoidGridPromise = null;
 
@@ -26,7 +27,7 @@ export function useReferenceSurfaces() {
       const endLon = lon + lonOffset;
 
       const [profile, geoidGrid] = await Promise.all([
-        fetchElevationProfile(lat, startLon, lat, endLon, 50),
+        fetchElevationProfile(lat, startLon, lat, endLon, 100),
         globalGeoidGridPromise
       ]);
 
